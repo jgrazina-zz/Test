@@ -32,12 +32,15 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.StrictMode;
 import android.util.Log;
+import android.util.Base64InputStream;
+import android.util.Base64;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -117,6 +120,8 @@ class AssetUtil {
             return getUriFromAsset(path);
         } else if (path.startsWith("http")){
             return getUriFromRemote(path);
+        } else if (path.startsWith("data:")){
+            return getUriFromInline(path);
         }
 
         return Uri.EMPTY;
@@ -272,6 +277,47 @@ class AssetUtil {
             e.printStackTrace();
         } catch (IOException e) {
             Log.e("Asset", "No Input can be created from http Stream");
+            e.printStackTrace();
+        }
+
+        return Uri.EMPTY;
+    }
+
+    /**
+     * Uri from remote located content.
+     *
+     * @param path
+     *      Remote address
+     *
+     * @return
+     *      Uri of the downloaded file
+     */
+    private Uri getUriFromInline(String inlineData) {
+        File file = getTmpFile();
+
+        if (file == null) {
+            Log.e("Asset", "Missing external cache dir");
+            return Uri.EMPTY;
+        }
+
+        try {
+
+			ByteArrayInputStream bais new ByteArrayInputStream(inlineData.getBytes());
+			Base64InputStream input = new Base64InputStream(bais, Base64.NO_WRAP);
+			FileOutputStream outStream = new FileOutputStream(file);
+
+            copyFile(input, outStream);
+
+            outStream.flush();
+            outStream.close();
+
+            return Uri.fromFile(file);
+
+        } catch (FileNotFoundException e) {
+            Log.e("Asset", "Failed to create new File from Inline Content");
+            e.printStackTrace();
+        } catch (IOException e) {
+            Log.e("Asset", "No Input can be created from Inline stream");
             e.printStackTrace();
         }
 
